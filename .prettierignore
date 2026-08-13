@@ -4,3 +4,4 @@ dist
 coverage
 data/source/*.json
 pnpm-lock.yaml
+apps/web/next-env.d.ts

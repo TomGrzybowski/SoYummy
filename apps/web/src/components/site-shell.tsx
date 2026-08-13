@@ -15,7 +15,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
     <>
       <header className="header">
         <Logo />
-      <nav aria-label="Main navigation">
+        <nav aria-label="Main navigation">
           <Link href="/categories/Beef">Categories</Link>
           <Link href="/add">Add recipes</Link>
           <Link href="/my">My recipes</Link>
@@ -24,19 +24,19 @@ export function SiteShell({ children }: { children: ReactNode }) {
           <Link href="/search" aria-label="Search">
             ⌕
           </Link>
-      </nav>
-      <details className="mobileNav">
-        <summary aria-label="Open navigation">☰</summary>
-        <nav aria-label="Mobile navigation">
-          <Link href="/categories/Beef">Categories</Link>
-          <Link href="/add">Add recipes</Link>
-          <Link href="/my">My recipes</Link>
-          <Link href="/favorite">Favorites</Link>
-          <Link href="/shopping-list">Shopping list</Link>
-          <Link href="/search">Search</Link>
         </nav>
-      </details>
-      <div className="profile">
+        <details className="mobileNav">
+          <summary aria-label="Open navigation">☰</summary>
+          <nav aria-label="Mobile navigation">
+            <Link href="/categories/Beef">Categories</Link>
+            <Link href="/add">Add recipes</Link>
+            <Link href="/my">My recipes</Link>
+            <Link href="/favorite">Favorites</Link>
+            <Link href="/shopping-list">Shopping list</Link>
+            <Link href="/search">Search</Link>
+          </nav>
+        </details>
+        <div className="profile">
           <span>TG</span>
           <ThemeToggle />
         </div>
