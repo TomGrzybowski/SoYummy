@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS users (id text PRIMARY KEY, name text NOT NULL, email text NOT NULL UNIQUE, password_hash text NOT NULL, avatar_url text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS sessions (id text PRIMARY KEY, user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE, token_hash text NOT NULL UNIQUE, expires_at timestamptz NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
+CREATE TABLE IF NOT EXISTS categories (id text PRIMARY KEY, title text NOT NULL UNIQUE, thumb text NOT NULL, description text NOT NULL);
+CREATE TABLE IF NOT EXISTS ingredients (id text PRIMARY KEY, title text NOT NULL, description text NOT NULL, thumb text NOT NULL);
+CREATE INDEX IF NOT EXISTS ingredients_title_idx ON ingredients(title);
+CREATE TABLE IF NOT EXISTS recipes (id text PRIMARY KEY, owner_id text REFERENCES users(id) ON DELETE CASCADE, title text NOT NULL, category text NOT NULL, area text NOT NULL DEFAULT '', instructions text NOT NULL, description text NOT NULL DEFAULT '', thumb text NOT NULL, preview text NOT NULL DEFAULT '', time integer NOT NULL, youtube text NOT NULL DEFAULT '', tags jsonb NOT NULL DEFAULT '[]', created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS recipes_category_idx ON recipes(category);
+CREATE INDEX IF NOT EXISTS recipes_title_idx ON recipes(title);
+CREATE INDEX IF NOT EXISTS recipes_owner_idx ON recipes(owner_id);
+CREATE TABLE IF NOT EXISTS recipe_ingredients (recipe_id text NOT NULL REFERENCES recipes(id) ON DELETE CASCADE, ingredient_id text NOT NULL REFERENCES ingredients(id), measure text NOT NULL, position integer NOT NULL, PRIMARY KEY(recipe_id, ingredient_id));
+CREATE TABLE IF NOT EXISTS favorites (user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE, recipe_id text NOT NULL REFERENCES recipes(id) ON DELETE CASCADE, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(user_id, recipe_id));
+CREATE INDEX IF NOT EXISTS favorites_recipe_idx ON favorites(recipe_id);
+CREATE TABLE IF NOT EXISTS shopping_list_items (user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE, ingredient_id text NOT NULL REFERENCES ingredients(id), measure text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(user_id, ingredient_id));
+CREATE TABLE IF NOT EXISTS subscriptions (id text PRIMARY KEY, email text NOT NULL UNIQUE, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS user_visit_days (user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE, day date NOT NULL, PRIMARY KEY(user_id, day));
+CREATE TABLE IF NOT EXISTS user_achievements (user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE, code text NOT NULL, unlocked_at timestamptz NOT NULL DEFAULT now(), seen boolean NOT NULL DEFAULT false, PRIMARY KEY(user_id, code));
