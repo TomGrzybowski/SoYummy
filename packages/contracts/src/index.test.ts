@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { paginationQuerySchema, registerSchema } from './index';
+import { paginationQuerySchema, registerSchema } from './index.js';
 
 describe('contracts', () => {
   it('normalizes e-mail addresses', () => {

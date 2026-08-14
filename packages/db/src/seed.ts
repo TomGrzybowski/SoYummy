@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { neon } from '@neondatabase/serverless';
-import { normalizeCatalog } from './normalize';
+import { normalizeCatalog } from './normalize.js';
 
 const sourceRoot = fileURLToPath(new URL('../../../data/source/', import.meta.url));
 const load = async (name: string) =>

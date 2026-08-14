@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { hash, verify } from '@node-rs/argon2';
 import type { AchievementCode, CreateRecipeInput, Recipe, User } from '@so-yummy/contracts';
-import { loadCatalog } from './catalog';
+import { loadCatalog } from './catalog.js';
 
 type InternalUser = User & { passwordHash: string };
 export type ShoppingItem = { ingredientId: string; title: string; thumb: string; measure: string };

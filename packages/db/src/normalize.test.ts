@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeCatalog } from './normalize';
+import { normalizeCatalog } from './normalize.js';
 
 describe('source normalization', () => {
   it('rejects incomplete source datasets before touching the database', () => {
