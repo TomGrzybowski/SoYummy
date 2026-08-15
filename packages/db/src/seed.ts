@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 import { normalizeCatalog } from './normalize.js';
 
 const sourceRoot = fileURLToPath(new URL('../../../data/source/', import.meta.url));
@@ -14,7 +14,7 @@ async function main() {
     await load('ingredients.json'),
     await load('recipes.json'),
   );
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false });
   await sql`SELECT pg_advisory_lock(831245091)`;
   try {
     for (const item of catalog.categories)
@@ -31,6 +31,7 @@ async function main() {
     );
   } finally {
     await sql`SELECT pg_advisory_unlock(831245091)`;
+    await sql.end();
   }
 }
 

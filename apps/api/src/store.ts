@@ -1,6 +1,14 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { hash, verify } from '@node-rs/argon2';
 import type { AchievementCode, CreateRecipeInput, Recipe, User } from '@so-yummy/contracts';
+import type {
+  AuthChallenge,
+  AuthRepository,
+  AuthUser,
+  PendingRegistration,
+  SessionRecord,
+} from './auth-service.js';
+import type { AuthEmailPurpose } from './mailer.js';
 import { loadCatalog } from './catalog.js';
 
 type InternalUser = User & { passwordHash: string };
@@ -8,7 +16,7 @@ export type ShoppingItem = { ingredientId: string; title: string; thumb: string;
 
 const sourceCatalog = await loadCatalog();
 
-export class Store {
+export class Store implements AuthRepository {
   readonly catalog = sourceCatalog;
   private users = new Map<string, InternalUser>();
   private sessions = new Map<string, { userId: string; expiresAt: number }>();
@@ -17,6 +25,8 @@ export class Store {
   private ownRecipes = new Map<string, Recipe>();
   private subscriptions = new Set<string>();
   private achievements = new Map<string, Map<AchievementCode, boolean>>();
+  private pendingRegistrations = new Map<string, PendingRegistration>();
+  private authChallenges: AuthChallenge[] = [];
 
   async register(name: string, email: string, password: string) {
     if ([...this.users.values()].some((user) => user.email === email))
@@ -35,6 +45,79 @@ export class Store {
     if (!user || !(await verify(user.passwordHash, password)))
       throw new StoreError('INVALID_CREDENTIALS', 'Invalid e-mail or password.', 401);
     return { user: this.publicUser(user), token: this.session(user.id) };
+  }
+  async authUserByEmail(email: string): Promise<AuthUser | undefined> {
+    return [...this.users.values()].find((user) => user.email === email);
+  }
+  async authUserById(id: string): Promise<AuthUser | undefined> {
+    return this.users.get(id);
+  }
+  async savePendingRegistration(value: PendingRegistration) {
+    this.pendingRegistrations.set(value.email, value);
+  }
+  async pendingRegistration(email: string) {
+    return this.pendingRegistrations.get(email);
+  }
+  async challengeCounts(email: string, purpose: AuthEmailPurpose, ipHash: string, since: Date) {
+    const recent = this.authChallenges.filter((item) => item.sentAt >= since);
+    return {
+      target: recent.filter((item) => item.email === email && item.purpose === purpose).length,
+      ip: recent.filter((item) => item.requestIpHash === ipHash).length,
+    };
+  }
+  async latestChallenge(email: string, purpose: AuthEmailPurpose) {
+    return this.authChallenges
+      .filter((item) => item.email === email && item.purpose === purpose)
+      .sort((a, b) => b.sentAt.getTime() - a.sentAt.getTime())[0];
+  }
+  async invalidateChallenges(email: string, purpose: AuthEmailPurpose, at: Date) {
+    for (const item of this.authChallenges)
+      if (item.email === email && item.purpose === purpose && !item.consumedAt)
+        item.consumedAt = at;
+  }
+  async createChallenge(value: AuthChallenge) {
+    this.authChallenges.push(value);
+  }
+  async deleteChallenge(id: string) {
+    this.authChallenges = this.authChallenges.filter((item) => item.id !== id);
+  }
+  async failChallenge(id: string) {
+    const item = this.authChallenges.find((candidate) => candidate.id === id);
+    if (item) item.attempts += 1;
+  }
+  async consumeChallenge(id: string, at: Date) {
+    const item = this.authChallenges.find((candidate) => candidate.id === id);
+    if (!item || item.consumedAt) return false;
+    item.consumedAt = at;
+    return true;
+  }
+  async activateRegistration(email: string, session: SessionRecord) {
+    const pending = this.pendingRegistrations.get(email);
+    if (!pending) throw new StoreError('REGISTRATION_NOT_FOUND', 'Start registration again.', 404);
+    if ([...this.users.values()].some((user) => user.email === email))
+      throw new StoreError('EMAIL_TAKEN', 'An account with this e-mail already exists.', 409);
+    const user: InternalUser = {
+      id: randomUUID(),
+      name: pending.name,
+      email,
+      passwordHash: pending.passwordHash,
+    };
+    this.users.set(user.id, user);
+    this.pendingRegistrations.delete(email);
+    this.sessions.set(session.tokenHash, {
+      userId: user.id,
+      expiresAt: session.expiresAt.getTime(),
+    });
+    return this.publicUser(user);
+  }
+  async replacePassword(userId: string, passwordHash: string, session?: SessionRecord) {
+    const user = this.users.get(userId);
+    if (!user) throw new StoreError('NOT_FOUND', 'User not found.', 404);
+    user.passwordHash = passwordHash;
+    for (const [key, value] of this.sessions)
+      if (value.userId === userId) this.sessions.delete(key);
+    if (session)
+      this.sessions.set(session.tokenHash, { userId, expiresAt: session.expiresAt.getTime() });
   }
   logout(token: string) {
     this.sessions.delete(this.tokenHash(token));

@@ -10,6 +10,24 @@ export const registerSchema = z.object({
   password: passwordSchema,
 });
 export const loginSchema = z.object({ email: emailSchema, password: passwordSchema });
+export const verificationCodeSchema = z.string().regex(/^\d{6}$/, 'Enter the six-digit code.');
+export const verifyRegistrationSchema = z.object({
+  email: emailSchema,
+  code: verificationCodeSchema,
+});
+export const resendRegistrationSchema = z.object({ email: emailSchema });
+export const forgotPasswordSchema = z.object({ email: emailSchema });
+export const resetPasswordSchema = z.object({
+  email: emailSchema,
+  code: verificationCodeSchema,
+  newPassword: passwordSchema,
+});
+export const requestPasswordChangeSchema = z.object({ currentPassword: passwordSchema });
+export const confirmPasswordChangeSchema = z.object({
+  currentPassword: passwordSchema,
+  newPassword: passwordSchema,
+  code: verificationCodeSchema,
+});
 export const updateProfileSchema = z.object({ name: z.string().trim().min(2).max(80) });
 export const subscriptionSchema = z.object({ email: emailSchema });
 
@@ -45,6 +63,9 @@ export const apiErrorSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type VerifyRegistrationInput = z.infer<typeof verifyRegistrationSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ConfirmPasswordChangeInput = z.infer<typeof confirmPasswordChangeSchema>;
 export type CreateRecipeInput = z.infer<typeof createRecipeSchema>;
 export interface Category {
   id: string;

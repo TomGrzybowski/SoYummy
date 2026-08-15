@@ -42,6 +42,37 @@ export const sessions = pgTable(
   ],
 );
 
+export const pendingRegistrations = pgTable('pending_registrations', {
+  email: text('email').primaryKey(),
+  name: text('name').notNull(),
+  passwordHash: text('password_hash').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const authChallenges = pgTable(
+  'auth_challenges',
+  {
+    id: text('id').primaryKey(),
+    purpose: text('purpose').notNull(),
+    email: text('email').notNull(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    codeHash: text('code_hash').notNull(),
+    requestIpHash: text('request_ip_hash').notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('auth_challenges_target_idx').on(table.purpose, table.email, table.createdAt),
+    index('auth_challenges_ip_idx').on(table.requestIpHash, table.createdAt),
+    index('auth_challenges_user_idx').on(table.userId),
+  ],
+);
+
 export const categories = pgTable(
   'categories',
   {

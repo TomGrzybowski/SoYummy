@@ -35,7 +35,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/db/migrations/0000_foundation.sql
+      - run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/db/migrations/0000_foundation.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/db/migrations/0001_email_auth.sql
       - run: pnpm db:seed
       - run: pnpm format:check
       - run: pnpm lint

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { paginationQuerySchema, registerSchema } from './index.js';
+import { paginationQuerySchema, registerSchema, verificationCodeSchema } from './index.js';
 
 describe('contracts', () => {
   it('normalizes e-mail addresses', () => {
@@ -10,5 +10,11 @@ describe('contracts', () => {
   });
   it('applies safe pagination defaults', () => {
     expect(paginationQuerySchema.parse({})).toEqual({ page: 1, pageSize: 12 });
+  });
+
+  it('accepts only six-digit verification codes', () => {
+    expect(verificationCodeSchema.parse('012345')).toBe('012345');
+    expect(() => verificationCodeSchema.parse('12345')).toThrow();
+    expect(() => verificationCodeSchema.parse('12345a')).toThrow();
   });
 });

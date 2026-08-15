@@ -5,7 +5,17 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "dist/**", "!.next/cache/**"],
-      "env": ["DATABASE_URL", "NEXT_PUBLIC_API_URL", "API_ORIGIN", "WEB_ORIGIN"]
+      "env": [
+        "DATABASE_URL",
+        "NEXT_PUBLIC_API_URL",
+        "API_ORIGIN",
+        "WEB_ORIGIN",
+        "SENDGRID_API_KEY",
+        "AUTH_CODE_PEPPER",
+        "EMAIL_FROM_ADDRESS",
+        "EMAIL_FROM_NAME",
+        "EMAIL_DELIVERY_MODE"
+      ]
     },
     "lint": { "dependsOn": ["^lint"] },
     "typecheck": { "dependsOn": ["^typecheck"] },

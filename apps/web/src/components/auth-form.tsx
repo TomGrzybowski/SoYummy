@@ -14,7 +14,11 @@ export function AuthForm({ mode }: { mode: 'signin' | 'register' }) {
     try {
       const payload = Object.fromEntries(formData);
       await apiClient.post(`/auth/${mode === 'signin' ? 'login' : 'register'}`, payload);
-      router.push('/main');
+      router.push(
+        mode === 'signin'
+          ? '/main'
+          : `/verify-email?email=${encodeURIComponent(String(payload.email))}`,
+      );
       router.refresh();
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Please try again.');
@@ -28,13 +32,21 @@ export function AuthForm({ mode }: { mode: 'signin' | 'register' }) {
       {mode === 'register' && (
         <input aria-label="Name" name="name" placeholder="Name" minLength={2} required />
       )}
-      <input aria-label="Email" name="email" type="email" placeholder="Email" required />
+      <input
+        aria-label="Email"
+        name="email"
+        type="email"
+        placeholder="Email"
+        autoComplete="email"
+        required
+      />
       <input
         aria-label="Password"
         name="password"
         type="password"
         placeholder="Password"
         minLength={8}
+        autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
         required
       />
       {error && (
@@ -48,6 +60,7 @@ export function AuthForm({ mode }: { mode: 'signin' | 'register' }) {
       <Link href={mode === 'signin' ? '/register' : '/signin'}>
         {mode === 'signin' ? 'Registration' : 'Sign in'}
       </Link>
+      {mode === 'signin' && <Link href="/forgot-password">Forgot password?</Link>}
     </form>
   );
 }

@@ -37,7 +37,9 @@ export function SiteShell({ children }: { children: ReactNode }) {
           </nav>
         </details>
         <div className="profile">
-          <span>TG</span>
+          <Link href="/account/security" aria-label="Account security">
+            TG
+          </Link>
           <ThemeToggle />
         </div>
       </header>

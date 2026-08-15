@@ -35,7 +35,9 @@ pnpm dev
 
 Web: `http://localhost:3000` · API: `http://localhost:4000` · Swagger: `http://localhost:4000/docs`
 
-The web app reads the supplied public catalog directly during local rendering. PostgreSQL is required for migrations and production persistence; set `DATABASE_URL`, apply `packages/db/migrations/0000_foundation.sql`, then run `pnpm db:seed`.
+The web app reads the supplied public catalog directly during local rendering. PostgreSQL is required for migrations and production persistence; set `DATABASE_URL`, apply the SQL files in `packages/db/migrations` in order, then run `pnpm db:seed`.
+
+Authentication emails use SendGrid. Configure `SENDGRID_API_KEY`, a stable random `AUTH_CODE_PEPPER`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME`, and `EMAIL_DELIVERY_MODE=send` on the API deployment. Local development defaults to `EMAIL_DELIVERY_MODE=log`, which prints one-time codes instead of sending them.
 
 ## Quality gates
 
@@ -59,11 +61,11 @@ Create two Vercel projects from the same repository:
 | `so-yummy-web` | `apps/web`     | automatic edge network |
 | `so-yummy-api` | `apps/api`     | `fra1`                 |
 
-Provision Neon and Blob through Vercel Marketplace, connect them to the API, and set `API_ORIGIN` on the web project. Related Projects keeps preview rewrites first-party. Run the SQL migration and seed once before production acceptance.
+Provision Neon and Blob through Vercel Marketplace, connect them to the API, and set `API_ORIGIN` on the web project. Related Projects keeps preview rewrites first-party. Apply every SQL migration and seed the catalog before deploying the API and web projects together.
 
 ## Security
 
-Passwords use Argon2id. Sessions use a random 256-bit token in a Secure, HttpOnly, SameSite=Lax cookie; only a SHA-256 token digest belongs in persistent storage. Uploads are limited to JPEG, PNG and WebP files up to 5 MB. Helmet, a CORS allowlist, payload limits and secret-redacted Pino logs are enabled.
+Passwords use Argon2id. Sessions use a random 256-bit token in a Secure, HttpOnly, SameSite=Lax cookie; only a SHA-256 token digest belongs in persistent storage. Six-digit authentication codes are protected with an HMAC pepper, expire after ten minutes, and are attempt- and delivery-limited. Uploads are limited to JPEG, PNG and WebP files up to 5 MB. Helmet, a CORS allowlist, payload limits and secret-redacted Pino logs are enabled.
 
 ## Data and license
 

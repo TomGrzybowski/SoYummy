@@ -26,8 +26,8 @@
   },
   "dependencies": {
     "@so-yummy/contracts": "workspace:*",
-    "@neondatabase/serverless": "latest",
-    "drizzle-orm": "latest"
+    "drizzle-orm": "latest",
+    "postgres": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",
