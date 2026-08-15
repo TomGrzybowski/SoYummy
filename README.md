@@ -37,7 +37,7 @@ Web: `http://localhost:3000` · API: `http://localhost:4000` · Swagger: `http:/
 
 The web app reads the supplied public catalog directly during local rendering. PostgreSQL is required for migrations and production persistence; set `DATABASE_URL`, apply the SQL files in `packages/db/migrations` in order, then run `pnpm db:seed`.
 
-Authentication emails use SendGrid. Configure `SENDGRID_API_KEY`, a stable random `AUTH_CODE_PEPPER`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME`, and `EMAIL_DELIVERY_MODE=send` on the API deployment. Local development defaults to `EMAIL_DELIVERY_MODE=log`, which prints one-time codes instead of sending them.
+Authentication emails use Mailjet Send API v3.1. Configure `MAILJET_API_KEY`, `MAILJET_SECRET_KEY`, a stable random `AUTH_CODE_PEPPER`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME`, and `EMAIL_DELIVERY_MODE=send` on the API deployment. Local development defaults to `EMAIL_DELIVERY_MODE=log`, which prints one-time codes instead of sending them.
 
 ## Quality gates
 

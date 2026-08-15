@@ -22,7 +22,6 @@
     "@node-rs/argon2": "latest",
     "@so-yummy/contracts": "workspace:*",
     "@so-yummy/db": "workspace:*",
-    "@sendgrid/mail": "latest",
     "@vercel/blob": "latest",
     "fastify": "latest",
     "drizzle-orm": "latest",

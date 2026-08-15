@@ -1,5 +1,3 @@
-import sgMail from '@sendgrid/mail';
-
 export type AuthEmailPurpose = 'registration' | 'password_reset' | 'password_change';
 
 export interface Mailer {
@@ -11,6 +9,8 @@ export interface Mailer {
   }): Promise<void>;
   sendPasswordChanged(input: { to: string; kind: 'reset' | 'change' }): Promise<void>;
 }
+
+const MAILJET_SEND_URL = 'https://api.mailjet.com/v3.1/send';
 
 const subjects: Record<AuthEmailPurpose, string> = {
   registration: 'Verify your So Yummy account',
@@ -24,38 +24,95 @@ const actions: Record<AuthEmailPurpose, string> = {
   password_change: 'change your password',
 };
 
-export class SendGridMailer implements Mailer {
+type MailjetMessage = {
+  From: { Email: string; Name: string };
+  To: Array<{ Email: string }>;
+  Subject: string;
+  TextPart: string;
+  HTMLPart: string;
+};
+
+type MailjetResponse = {
+  Messages?: Array<{ Status?: string }>;
+};
+
+class MailjetDeliveryError extends Error {
+  readonly response: { statusCode: number; body: { provider: 'mailjet'; outcome: string } };
+
+  constructor(statusCode: number, outcome: string) {
+    super(`Mailjet delivery failed (${outcome}, HTTP ${statusCode})`);
+    this.name = 'MailjetDeliveryError';
+    this.response = { statusCode, body: { provider: 'mailjet', outcome } };
+  }
+}
+
+export class MailjetMailer implements Mailer {
+  private readonly authorization: string;
+
   constructor(
     apiKey: string,
+    secretKey: string,
     private readonly from: { email: string; name: string },
+    private readonly fetcher: typeof fetch = fetch,
   ) {
-    sgMail.setApiKey(apiKey);
+    this.authorization = `Basic ${Buffer.from(`${apiKey}:${secretKey}`).toString('base64')}`;
   }
 
   async sendCode({ to, purpose, code, expiresInMinutes }: Parameters<Mailer['sendCode']>[0]) {
     const action = actions[purpose];
-    const text = `Use code ${code} to ${action}. It expires in ${expiresInMinutes} minutes. If you did not request this, you can ignore this email.`;
-    const [response] = await sgMail.send({
-      to,
-      from: this.from,
-      subject: subjects[purpose],
-      text,
-      html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1f2937"><h1 style="color:#8baa36">So Yummy</h1><p>Use this code to ${action}:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</p><p>The code expires in ${expiresInMinutes} minutes.</p><p style="color:#6b7280">If you did not request this, you can ignore this email.</p></div>`,
+    await this.send({
+      From: { Email: this.from.email, Name: this.from.name },
+      To: [{ Email: to }],
+      Subject: subjects[purpose],
+      TextPart: `Use code ${code} to ${action}. It expires in ${expiresInMinutes} minutes. If you did not request this, you can ignore this email.`,
+      HTMLPart: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1f2937"><h1 style="color:#8baa36">So Yummy</h1><p>Use this code to ${action}:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;margin:24px 0">${code}</p><p>The code expires in ${expiresInMinutes} minutes.</p><p style="color:#6b7280">If you did not request this, you can ignore this email.</p></div>`,
     });
-    if (response.statusCode !== 202) throw new Error(`SendGrid returned ${response.statusCode}`);
   }
 
   async sendPasswordChanged({ to, kind }: Parameters<Mailer['sendPasswordChanged']>[0]) {
     const action = kind === 'reset' ? 'reset' : 'changed';
-    const text = `Your So Yummy password was ${action}. If this was not you, contact support immediately.`;
-    const [response] = await sgMail.send({
-      to,
-      from: this.from,
-      subject: 'Your So Yummy password was changed',
-      text,
-      html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1f2937"><h1 style="color:#8baa36">So Yummy</h1><p>Your password was ${action} successfully.</p><p>If this was not you, contact support immediately.</p></div>`,
+    await this.send({
+      From: { Email: this.from.email, Name: this.from.name },
+      To: [{ Email: to }],
+      Subject: 'Your So Yummy password was changed',
+      TextPart: `Your So Yummy password was ${action}. If this was not you, contact support immediately.`,
+      HTMLPart: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1f2937"><h1 style="color:#8baa36">So Yummy</h1><p>Your password was ${action} successfully.</p><p>If this was not you, contact support immediately.</p></div>`,
     });
-    if (response.statusCode !== 202) throw new Error(`SendGrid returned ${response.statusCode}`);
+  }
+
+  private async send(message: MailjetMessage) {
+    let response: Response;
+    try {
+      response = await this.fetcher(MAILJET_SEND_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: this.authorization,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ Messages: [message] }),
+      });
+    } catch {
+      throw new MailjetDeliveryError(0, 'network_error');
+    }
+
+    if (!response.ok) {
+      throw new MailjetDeliveryError(response.status, 'request_rejected');
+    }
+
+    let result: MailjetResponse;
+    try {
+      result = (await response.json()) as MailjetResponse;
+    } catch {
+      throw new MailjetDeliveryError(response.status, 'invalid_response');
+    }
+
+    if (
+      !Array.isArray(result.Messages) ||
+      result.Messages.length === 0 ||
+      result.Messages.some((item) => item.Status !== 'success')
+    ) {
+      throw new MailjetDeliveryError(response.status, 'message_rejected');
+    }
   }
 }
 
@@ -73,9 +130,14 @@ export function createMailer(): Mailer {
     process.env.EMAIL_DELIVERY_MODE ?? (process.env.NODE_ENV === 'production' ? 'send' : 'log');
   if (mode === 'log') return new LoggingMailer();
   if (mode !== 'send') throw new Error('EMAIL_DELIVERY_MODE must be "send" or "log"');
-  const apiKey = process.env.SENDGRID_API_KEY;
-  if (!apiKey) throw new Error('SENDGRID_API_KEY is required when EMAIL_DELIVERY_MODE=send');
-  return new SendGridMailer(apiKey, {
+  const apiKey = process.env.MAILJET_API_KEY;
+  const secretKey = process.env.MAILJET_SECRET_KEY;
+  if (!apiKey || !secretKey) {
+    throw new Error(
+      'MAILJET_API_KEY and MAILJET_SECRET_KEY are required when EMAIL_DELIVERY_MODE=send',
+    );
+  }
+  return new MailjetMailer(apiKey, secretKey, {
     email: process.env.EMAIL_FROM_ADDRESS ?? 't.grzybowski94@gmail.com',
     name: process.env.EMAIL_FROM_NAME ?? 'So Yummy',
   });
