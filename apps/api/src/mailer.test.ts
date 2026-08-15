@@ -80,9 +80,10 @@ describe('MailjetMailer', () => {
   });
 
   it('rejects non-2xx responses without exposing provider response contents', async () => {
-    const response = new Response(JSON.stringify({ ErrorMessage: 'request contained 654321' }), {
-      status: 401,
-    });
+    const response = new Response(
+      JSON.stringify({ ErrorCode: 'mj-0015', ErrorMessage: 'request contained 654321' }),
+      { status: 401 },
+    );
     const { mailer } = createHarness(response);
 
     await expect(
@@ -96,7 +97,37 @@ describe('MailjetMailer', () => {
       message: 'Mailjet delivery failed (authentication_failed, HTTP 401)',
       response: {
         statusCode: 401,
-        body: { provider: 'mailjet', outcome: 'authentication_failed' },
+        body: {
+          provider: 'mailjet',
+          outcome: 'authentication_failed',
+          providerCode: 'mj-0015',
+        },
+      },
+    });
+  });
+
+  it('distinguishes a suspended API key using only Mailjet safe error metadata', async () => {
+    const response = new Response(
+      JSON.stringify({ ErrorCode: 'mj-0001', ErrorMessage: 'sensitive provider details' }),
+      { status: 401 },
+    );
+    const { mailer } = createHarness(response);
+
+    await expect(
+      mailer.sendCode({
+        to: 'recipient@example.com',
+        purpose: 'registration',
+        code: '123456',
+        expiresInMinutes: 10,
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        statusCode: 401,
+        body: {
+          provider: 'mailjet',
+          outcome: 'api_key_suspended',
+          providerCode: 'mj-0001',
+        },
       },
     });
   });

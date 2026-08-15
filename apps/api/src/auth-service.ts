@@ -208,12 +208,16 @@ export class AuthService {
         }),
       );
       await this.repository.deleteChallenge(challenge.id);
+      const providerOutcome = (deliveryError.response?.body as { outcome?: string } | undefined)
+        ?.outcome;
       const deliveryMessage =
-        deliveryError.response?.statusCode === 401 || deliveryError.response?.statusCode === 403
-          ? "Your details are valid, but this site's email service credentials were rejected. Please use the demo account or contact the site owner."
-          : deliveryError.response?.statusCode === 429
-            ? 'Your details are valid, but the email service is temporarily rate-limited. Please try again later.'
-            : 'Your details are valid, but the email service is temporarily unavailable. Please try again later.';
+        providerOutcome === 'api_key_suspended'
+          ? "Your details are valid, but this site's email provider has suspended its API key. Please use the demo account or contact the site owner."
+          : deliveryError.response?.statusCode === 401 || deliveryError.response?.statusCode === 403
+            ? "Your details are valid, but this site's email service credentials were rejected. Please use the demo account or contact the site owner."
+            : deliveryError.response?.statusCode === 429
+              ? 'Your details are valid, but the email service is temporarily rate-limited. Please try again later.'
+              : 'Your details are valid, but the email service is temporarily unavailable. Please try again later.';
       throw new StoreError('EMAIL_DELIVERY_FAILED', deliveryMessage, 503);
     }
   }

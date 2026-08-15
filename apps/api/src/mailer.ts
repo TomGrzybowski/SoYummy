@@ -35,14 +35,23 @@ type MailjetMessage = {
 type MailjetResponse = {
   Messages?: Array<{ Status?: string }>;
 };
+type MailjetErrorResponse = { ErrorCode?: string };
+type SanitizedDeliveryDetails = {
+  provider: 'mailjet';
+  outcome: string;
+  providerCode?: string;
+};
 
 class MailjetDeliveryError extends Error {
-  readonly response: { statusCode: number; body: { provider: 'mailjet'; outcome: string } };
+  readonly response: { statusCode: number; body: SanitizedDeliveryDetails };
 
-  constructor(statusCode: number, outcome: string) {
+  constructor(statusCode: number, outcome: string, providerCode?: string) {
     super(`Mailjet delivery failed (${outcome}, HTTP ${statusCode})`);
     this.name = 'MailjetDeliveryError';
-    this.response = { statusCode, body: { provider: 'mailjet', outcome } };
+    this.response = {
+      statusCode,
+      body: { provider: 'mailjet', outcome, ...(providerCode ? { providerCode } : {}) },
+    };
   }
 }
 
@@ -112,7 +121,16 @@ export class MailjetMailer implements Mailer {
     }
 
     if (!response.ok) {
-      throw new MailjetDeliveryError(response.status, deliveryOutcome(response.status));
+      let providerCode: string | undefined;
+      try {
+        const result = (await response.json()) as MailjetErrorResponse;
+        if (typeof result.ErrorCode === 'string') providerCode = result.ErrorCode;
+      } catch {
+        // The provider response may not be JSON. Never log its raw contents.
+      }
+      const outcome =
+        providerCode === 'mj-0001' ? 'api_key_suspended' : deliveryOutcome(response.status);
+      throw new MailjetDeliveryError(response.status, outcome, providerCode);
     }
 
     let result: MailjetResponse;
