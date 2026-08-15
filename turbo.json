@@ -17,8 +17,8 @@
         "EMAIL_DELIVERY_MODE"
       ]
     },
-    "lint": { "dependsOn": ["^lint"] },
-    "typecheck": { "dependsOn": ["^typecheck"] },
+    "lint": { "dependsOn": ["^build"] },
+    "typecheck": { "dependsOn": ["^build"] },
     "test": { "dependsOn": ["^build"], "outputs": ["coverage/**"] },
     "dev": { "cache": false, "persistent": true }
   }
