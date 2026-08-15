@@ -193,7 +193,20 @@ export class AuthService {
     if (!deliver) return;
     try {
       await this.mailer.sendCode({ to: email, purpose, code, expiresInMinutes: 10 });
-    } catch {
+    } catch (error) {
+      const deliveryError = error as {
+        code?: number;
+        message?: string;
+        response?: { body?: unknown; statusCode?: number };
+      };
+      console.error(
+        JSON.stringify({
+          event: 'verification_email_delivery_failed',
+          message: deliveryError.message ?? 'Unknown email delivery error',
+          statusCode: deliveryError.response?.statusCode ?? deliveryError.code,
+          response: deliveryError.response?.body,
+        }),
+      );
       await this.repository.deleteChallenge(challenge.id);
       throw new StoreError(
         'EMAIL_DELIVERY_FAILED',
