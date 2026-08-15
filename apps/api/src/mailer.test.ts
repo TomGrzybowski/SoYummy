@@ -93,10 +93,28 @@ describe('MailjetMailer', () => {
         expiresInMinutes: 10,
       }),
     ).rejects.toMatchObject({
-      message: 'Mailjet delivery failed (request_rejected, HTTP 401)',
+      message: 'Mailjet delivery failed (authentication_failed, HTTP 401)',
       response: {
         statusCode: 401,
-        body: { provider: 'mailjet', outcome: 'request_rejected' },
+        body: { provider: 'mailjet', outcome: 'authentication_failed' },
+      },
+    });
+  });
+
+  it('classifies provider throttling without exposing provider response contents', async () => {
+    const { mailer } = createHarness(new Response('sensitive response', { status: 429 }));
+
+    await expect(
+      mailer.sendCode({
+        to: 'recipient@example.com',
+        purpose: 'registration',
+        code: '123456',
+        expiresInMinutes: 10,
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        statusCode: 429,
+        body: { provider: 'mailjet', outcome: 'rate_limited' },
       },
     });
   });
@@ -147,5 +165,32 @@ describe('createMailer', () => {
     process.env.EMAIL_DELIVERY_MODE = 'log';
 
     expect(createMailer()).toBeInstanceOf(LoggingMailer);
+  });
+
+  it('trims accidental whitespace and wrapping quotes from provider credentials', async () => {
+    process.env.EMAIL_DELIVERY_MODE = 'send';
+    process.env.MAILJET_API_KEY = '  "test-api-key"  ';
+    process.env.MAILJET_SECRET_KEY = "  'test-secret-key'  ";
+    const originalFetch = global.fetch;
+    let authorization = '';
+    global.fetch = async (_url, init) => {
+      authorization = String((init?.headers as Record<string, string>).Authorization);
+      return successfulResponse();
+    };
+
+    try {
+      await createMailer().sendCode({
+        to: 'recipient@example.com',
+        purpose: 'registration',
+        code: '123456',
+        expiresInMinutes: 10,
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+
+    expect(authorization).toBe(
+      `Basic ${Buffer.from('test-api-key:test-secret-key').toString('base64')}`,
+    );
   });
 });

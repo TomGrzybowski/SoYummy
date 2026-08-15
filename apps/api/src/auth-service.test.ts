@@ -11,6 +11,22 @@ class CapturingMailer implements Mailer {
   async sendPasswordChanged() {}
 }
 
+class RejectingMailer implements Mailer {
+  async sendCode() {
+    const error = new Error(
+      'Mailjet delivery failed (authentication_failed, HTTP 401)',
+    ) as Error & {
+      response: { statusCode: number; body: unknown };
+    };
+    error.response = {
+      statusCode: 401,
+      body: { provider: 'mailjet', outcome: 'authentication_failed' },
+    };
+    throw error;
+  }
+  async sendPasswordChanged() {}
+}
+
 const registration = { name: 'Tomasz', email: 'person@example.com', password: 'strong-password' };
 
 describe('AuthService', () => {
@@ -66,5 +82,16 @@ describe('AuthService', () => {
     await expect(
       service.requestPasswordReset('missing@example.com', '127.0.0.3'),
     ).rejects.toMatchObject({ code: 'CODE_RATE_LIMITED' });
+  });
+
+  it('explains that provider authentication failure is not invalid form input', async () => {
+    const service = new AuthService(new Store(), new RejectingMailer(), 'a-secure-test-pepper');
+
+    await expect(service.requestRegistration(registration, '127.0.0.4')).rejects.toMatchObject({
+      code: 'EMAIL_DELIVERY_FAILED',
+      statusCode: 503,
+      message:
+        "Your details are valid, but this site's email service credentials were rejected. Please use the demo account or contact the site owner.",
+    });
   });
 });

@@ -48,6 +48,8 @@ function createStore(): AppStore {
 }
 
 export async function buildApp(store: AppStore = createStore(), mailer: Mailer = createMailer()) {
+  if (store instanceof DatabaseStore && process.env.NODE_ENV === 'production')
+    await store.ensureDemoAccount();
   const pepper =
     process.env.AUTH_CODE_PEPPER ??
     (process.env.NODE_ENV === 'production' ? undefined : 'development-only-auth-code-pepper');

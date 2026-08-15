@@ -46,6 +46,22 @@ class MailjetDeliveryError extends Error {
   }
 }
 
+function deliveryOutcome(statusCode: number) {
+  if (statusCode === 401 || statusCode === 403) return 'authentication_failed';
+  if (statusCode === 429) return 'rate_limited';
+  if (statusCode >= 500) return 'provider_unavailable';
+  return 'request_rejected';
+}
+
+function environmentCredential(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  const wrappingQuote = trimmed[0];
+  if ((wrappingQuote === '"' || wrappingQuote === "'") && trimmed.at(-1) === wrappingQuote)
+    return trimmed.slice(1, -1).trim();
+  return trimmed;
+}
+
 export class MailjetMailer implements Mailer {
   private readonly authorization: string;
 
@@ -96,7 +112,7 @@ export class MailjetMailer implements Mailer {
     }
 
     if (!response.ok) {
-      throw new MailjetDeliveryError(response.status, 'request_rejected');
+      throw new MailjetDeliveryError(response.status, deliveryOutcome(response.status));
     }
 
     let result: MailjetResponse;
@@ -130,15 +146,15 @@ export function createMailer(): Mailer {
     process.env.EMAIL_DELIVERY_MODE ?? (process.env.NODE_ENV === 'production' ? 'send' : 'log');
   if (mode === 'log') return new LoggingMailer();
   if (mode !== 'send') throw new Error('EMAIL_DELIVERY_MODE must be "send" or "log"');
-  const apiKey = process.env.MAILJET_API_KEY;
-  const secretKey = process.env.MAILJET_SECRET_KEY;
+  const apiKey = environmentCredential(process.env.MAILJET_API_KEY);
+  const secretKey = environmentCredential(process.env.MAILJET_SECRET_KEY);
   if (!apiKey || !secretKey) {
     throw new Error(
       'MAILJET_API_KEY and MAILJET_SECRET_KEY are required when EMAIL_DELIVERY_MODE=send',
     );
   }
   return new MailjetMailer(apiKey, secretKey, {
-    email: process.env.EMAIL_FROM_ADDRESS ?? 't.grzybowski94@gmail.com',
-    name: process.env.EMAIL_FROM_NAME ?? 'So Yummy',
+    email: environmentCredential(process.env.EMAIL_FROM_ADDRESS) ?? 't.grzybowski94@gmail.com',
+    name: environmentCredential(process.env.EMAIL_FROM_NAME) ?? 'So Yummy',
   });
 }

@@ -28,6 +28,26 @@ export default function WelcomePage() {
           </Link>
         </div>
       </div>
+      <aside className="recruiterDemo" aria-labelledby="recruiter-demo-title">
+        <div>
+          <span className="recruiterDemoLabel">Recruiter shortcut</span>
+          <h2 id="recruiter-demo-title">Explore without email verification</h2>
+          <p>Use the shared demo account to see saved favorites and a prepared shopping list.</p>
+        </div>
+        <dl>
+          <div>
+            <dt>Email</dt>
+            <dd>demo@soyummy.app</dd>
+          </div>
+          <div>
+            <dt>Password</dt>
+            <dd>RecruiterDemo2026!</dd>
+          </div>
+        </dl>
+        <Link className="recruiterDemoLink" href="/signin">
+          Open the demo account →
+        </Link>
+      </aside>
     </main>
   );
 }

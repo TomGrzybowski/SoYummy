@@ -54,7 +54,8 @@ button,
   height: 84px;
   max-width: 1240px;
   margin: auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 48px;
   padding: 0 20px;
@@ -81,11 +82,12 @@ button,
 .header .logo strong {
   display: none;
 }
-.header nav {
+.header .desktopNav {
   display: flex;
   gap: 26px;
-  margin-left: auto;
+  justify-content: flex-start;
   align-items: center;
+  padding-left: clamp(64px, 8vw, 120px);
   font-size: 14px;
 }
 .header nav a:hover,
@@ -96,6 +98,16 @@ button,
   display: flex;
   align-items: center;
   gap: 18px;
+}
+
+[data-theme='dark'] .header .desktopNav {
+  color: #22252a;
+  background: rgb(255 255 255 / 88%);
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 999px;
+  padding: 10px 18px 10px clamp(64px, 8vw, 120px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  backdrop-filter: blur(10px);
 }
 .profile > span,
 .profile > a {
@@ -484,6 +496,79 @@ footer {
 .welcome .buttonOutline {
   background: transparent;
 }
+.recruiterDemo {
+  width: min(100%, 640px);
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px 28px;
+  padding: 22px 24px;
+  text-align: left;
+  color: #22252a;
+  background: rgb(255 255 255 / 94%);
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 20px;
+  box-shadow: 0 18px 45px rgb(34 37 42 / 18%);
+  backdrop-filter: blur(10px);
+}
+.recruiterDemoLabel {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: #68831f;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.recruiterDemo h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+.recruiterDemo p {
+  margin: 0;
+  color: #596078;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.recruiterDemo dl {
+  min-width: 210px;
+  margin: 0;
+}
+.recruiterDemo dl div + div {
+  margin-top: 8px;
+}
+.recruiterDemo dt {
+  color: #7e7e7e;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.recruiterDemo dd {
+  margin: 1px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.recruiterDemoLink {
+  grid-column: 1 / -1;
+  justify-self: end;
+  color: #68831f;
+  font-size: 13px;
+  font-weight: 700;
+}
+@media (min-width: 768px) {
+  .welcome {
+    grid-template-columns: minmax(240px, 330px) minmax(400px, 560px);
+    align-content: center;
+    column-gap: 48px;
+    row-gap: 28px;
+  }
+  .recruiterDemo {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+}
 .authPage {
   min-height: 100vh;
   background: linear-gradient(162deg, #fff 0 43%, var(--green) 43%);
@@ -812,8 +897,9 @@ footer {
 @media (max-width: 1279px) {
   .header {
     height: 74px;
+    display: flex;
   }
-  .header nav {
+  .header .desktopNav {
     display: none;
   }
   .mobileNav {
@@ -984,6 +1070,17 @@ footer {
   }
   .welcomeCopy h1 {
     font-size: 28px;
+  }
+  .recruiterDemo {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+  .recruiterDemo dl {
+    min-width: 0;
+  }
+  .recruiterDemoLink {
+    grid-column: auto;
+    justify-self: start;
   }
   .authPage {
     display: block;

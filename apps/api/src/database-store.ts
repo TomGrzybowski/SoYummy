@@ -16,10 +16,64 @@ import { StoreError, type ShoppingItem } from './store.js';
 
 const sourceCatalog = await loadCatalog();
 type Database = ReturnType<typeof createDatabase>;
+const DEMO_ACCOUNT = {
+  email: 'demo@soyummy.app',
+  password: 'RecruiterDemo2026!',
+  name: 'Recruiter Demo',
+  favoriteRecipeIds: [
+    '640cd5ac2d9fecf12e8897fc',
+    '640cd5ac2d9fecf12e8897f0',
+    '640cd5ac2d9fecf12e8897f2',
+  ],
+  shoppingItems: [
+    { ingredientId: '640c2dd963a319ea671e365b', measure: '500 g' },
+    { ingredientId: '640c2dd963a319ea671e365c', measure: '2 fillets' },
+    { ingredientId: '640c2dd963a319ea671e36e3', measure: '3 cloves' },
+  ],
+} as const;
 
 export class DatabaseStore implements AuthRepository {
   readonly catalog = sourceCatalog;
   constructor(private readonly db: Database = createDatabase()) {}
+
+  async ensureDemoAccount() {
+    let user = await this.authUserByEmail(DEMO_ACCOUNT.email);
+    if (!user) {
+      await this.db
+        .insert(schema.users)
+        .values({
+          id: randomUUID(),
+          name: DEMO_ACCOUNT.name,
+          email: DEMO_ACCOUNT.email,
+          passwordHash: await hash(DEMO_ACCOUNT.password),
+        })
+        .onConflictDoNothing();
+      user = await this.authUserByEmail(DEMO_ACCOUNT.email);
+    }
+    if (!user) throw new Error('The recruiter demo account could not be created');
+
+    await this.db
+      .insert(schema.favorites)
+      .values(DEMO_ACCOUNT.favoriteRecipeIds.map((recipeId) => ({ userId: user.id, recipeId })))
+      .onConflictDoNothing();
+
+    for (const item of DEMO_ACCOUNT.shoppingItems)
+      await this.db
+        .insert(schema.shoppingListItems)
+        .values({ userId: user.id, ...item })
+        .onConflictDoUpdate({
+          target: [schema.shoppingListItems.userId, schema.shoppingListItems.ingredientId],
+          set: { measure: item.measure },
+        });
+
+    await this.db
+      .insert(schema.userAchievements)
+      .values([
+        { userId: user.id, code: 'first-favorite', seen: true },
+        { userId: user.id, code: 'first-shopping-list', seen: true },
+      ])
+      .onConflictDoNothing();
+  }
 
   async login(email: string, password: string) {
     const user = await this.authUserByEmail(email);

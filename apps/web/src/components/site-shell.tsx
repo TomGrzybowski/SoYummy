@@ -15,7 +15,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
     <>
       <header className="header">
         <Logo />
-        <nav aria-label="Main navigation">
+        <nav className="desktopNav" aria-label="Main navigation">
           <Link href="/categories/Beef">Categories</Link>
           <Link href="/add">Add recipes</Link>
           <Link href="/my">My recipes</Link>
