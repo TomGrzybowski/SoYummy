@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Recipe } from '@so-yummy/contracts';
-export function RecipeCard({ recipe }: { recipe: Recipe }) {
+type RecipeCardRecipe = Pick<Recipe, 'id' | 'title' | 'thumb' | 'preview'>;
+export function RecipeCard({ recipe }: { recipe: RecipeCardRecipe }) {
   return (
     <Link href={`/recipe/${recipe.id}`} className="recipeCard">
       <Image

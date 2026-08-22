@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { catalog } from '@/lib/catalog';
+import { FavoriteButton, ShoppingListButton } from '@/components/saved-item-controls';
 export default async function RecipePage({ params }: { params: Promise<{ recipeId: string }> }) {
   const { recipeId } = await params;
   const { recipes } = await catalog();
@@ -16,7 +17,7 @@ export default async function RecipePage({ params }: { params: Promise<{ recipeI
             {recipe.description ||
               `A delicious ${recipe.category.toLowerCase()} recipe for every occasion.`}
           </p>
-          <button>Add to favorite recipes</button>
+          <FavoriteButton recipe={recipe} />
           <span>◷ {recipe.time} min</span>
         </div>
       </section>
@@ -29,7 +30,7 @@ export default async function RecipePage({ params }: { params: Promise<{ recipeI
                 <Image src={ingredient.thumb} alt="" width={80} height={80} />
                 <span>{ingredient.title}</span>
                 <em>{ingredient.measure}</em>
-                <button aria-label={`Add ${ingredient.title} to shopping list`}>＋</button>
+                <ShoppingListButton ingredient={ingredient} />
               </li>
             ))}
           </ul>
