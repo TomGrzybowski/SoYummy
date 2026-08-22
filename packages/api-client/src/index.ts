@@ -5,7 +5,9 @@ export class ApiClient {
       credentials: 'include',
       ...init,
       headers: {
-        ...(init?.body instanceof FormData ? {} : { 'content-type': 'application/json' }),
+        ...(init?.body === undefined || init.body instanceof FormData
+          ? {}
+          : { 'content-type': 'application/json' }),
         ...init?.headers,
       },
     });
