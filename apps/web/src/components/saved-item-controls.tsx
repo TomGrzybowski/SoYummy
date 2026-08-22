@@ -12,6 +12,20 @@ import {
   type ShoppingItem,
 } from '@/lib/saved-items';
 
+async function addShoppingItem(ingredient: RecipeIngredient) {
+  const response = await apiClient.post<{ item: ShoppingItem }>('/shopping-list', {
+    ingredientId: ingredient.ingredientId,
+    measure: ingredient.measure,
+  });
+  return response.item;
+}
+
+function mergeShoppingItems(current: ShoppingItem[] = [], added: ShoppingItem[]) {
+  const byIngredient = new Map(current.map((item) => [item.ingredientId, item]));
+  for (const item of added) byIngredient.set(item.ingredientId, item);
+  return [...byIngredient.values()];
+}
+
 export function FavoriteButton({ recipe }: { recipe: FavoriteRecipe }) {
   const queryClient = useQueryClient();
   const favorites = useQuery({ queryKey: savedItemKeys.favorites, queryFn: getFavorites });
@@ -27,6 +41,7 @@ export function FavoriteButton({ recipe }: { recipe: FavoriteRecipe }) {
       );
     },
   });
+  const error = mutation.error ?? favorites.error;
 
   return (
     <div className="favoriteControl">
@@ -44,9 +59,9 @@ export function FavoriteButton({ recipe }: { recipe: FavoriteRecipe }) {
               ? 'Remove from favorite recipes'
               : 'Add to favorite recipes'}
       </button>
-      {mutation.error && (
+      {error && (
         <span role="alert" className="inlineError">
-          {errorMessage(mutation.error)}
+          {errorMessage(error, 'Could not update favorite recipes. Please try again.')}
         </span>
       )}
     </div>
@@ -62,16 +77,11 @@ export function ShoppingListButton({ ingredient }: { ingredient: RecipeIngredien
   const isAdded =
     shoppingList.data?.some((item) => item.ingredientId === ingredient.ingredientId) ?? false;
   const mutation = useMutation({
-    mutationFn: () =>
-      apiClient.post<{ item: ShoppingItem }>('/shopping-list', {
-        ingredientId: ingredient.ingredientId,
-        measure: ingredient.measure,
-      }),
-    onSuccess: ({ item }) => {
-      queryClient.setQueryData<ShoppingItem[]>(savedItemKeys.shoppingList, (current = []) => [
-        ...current.filter((entry) => entry.ingredientId !== item.ingredientId),
-        item,
-      ]);
+    mutationFn: () => addShoppingItem(ingredient),
+    onSuccess: (item) => {
+      queryClient.setQueryData<ShoppingItem[]>(savedItemKeys.shoppingList, (current) =>
+        mergeShoppingItems(current, [item]),
+      );
     },
   });
 
@@ -93,9 +103,57 @@ export function ShoppingListButton({ ingredient }: { ingredient: RecipeIngredien
       >
         {mutation.isPending ? '…' : isAdded ? '✓' : '＋'}
       </button>
-      {mutation.error && (
+      {(mutation.error ?? shoppingList.error) && (
         <span role="alert" className="inlineError">
-          {errorMessage(mutation.error)}
+          {errorMessage(
+            mutation.error ?? shoppingList.error,
+            `Could not add ${ingredient.title}. Please try again.`,
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function AddAllToShoppingListButton({ ingredients }: { ingredients: RecipeIngredient[] }) {
+  const queryClient = useQueryClient();
+  const shoppingList = useQuery({
+    queryKey: savedItemKeys.shoppingList,
+    queryFn: getShoppingList,
+  });
+  const addedIds = new Set(shoppingList.data?.map((item) => item.ingredientId));
+  const remaining = ingredients.filter((item) => !addedIds.has(item.ingredientId));
+  const mutation = useMutation({
+    mutationFn: () => Promise.all(remaining.map(addShoppingItem)),
+    onSuccess: (items) => {
+      queryClient.setQueryData<ShoppingItem[]>(savedItemKeys.shoppingList, (current) =>
+        mergeShoppingItems(current, items),
+      );
+    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: savedItemKeys.shoppingList, exact: true }),
+  });
+  const allAdded = shoppingList.isSuccess && remaining.length === 0;
+  const label = mutation.isPending
+    ? 'Adding all ingredients to shopping list'
+    : allAdded
+      ? 'All ingredients are in shopping list'
+      : 'Add all ingredients to shopping list';
+  const error = mutation.error ?? shoppingList.error;
+
+  return (
+    <span className="addAllControl">
+      <button
+        type="button"
+        aria-label={label}
+        disabled={shoppingList.isPending || shoppingList.isError || mutation.isPending || allAdded}
+        onClick={() => mutation.mutate()}
+      >
+        {mutation.isPending ? 'Adding…' : allAdded ? 'All added' : 'Add all'}
+      </button>
+      {error && (
+        <span role="alert" className="inlineError">
+          {errorMessage(error, 'Could not add all ingredients. Please try again.')}
         </span>
       )}
     </span>

@@ -25,6 +25,7 @@ export async function getShoppingList() {
   return response.items;
 }
 
-export function errorMessage(value: unknown) {
-  return value instanceof Error ? value.message : 'Please try again.';
+export function errorMessage(value: unknown, fallback = 'Please try again.') {
+  if (!(value instanceof Error)) return fallback;
+  return value.message === 'Something went wrong.' ? fallback : value.message;
 }

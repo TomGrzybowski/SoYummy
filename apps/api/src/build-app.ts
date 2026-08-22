@@ -87,6 +87,8 @@ export async function buildApp(store: AppStore = createStore(), mailer: Mailer =
   app.setErrorHandler((error, request, reply) => {
     const known = error instanceof StoreError;
     const validation = typeof error === 'object' && error !== null && 'issues' in error;
+    if (!known && !validation)
+      request.log.error({ err: error, requestId: request.id }, 'Unhandled request error');
     const message = error instanceof Error ? error.message : 'Invalid request.';
     reply.status(known ? error.statusCode : validation ? 400 : 500).send({
       code: known ? error.code : validation ? 'VALIDATION_ERROR' : 'INTERNAL_ERROR',
@@ -143,7 +145,7 @@ export async function buildApp(store: AppStore = createStore(), mailer: Mailer =
   app.post('/v1/auth/logout', async (request, reply) => {
     const token = request.cookies[cookieName];
     if (token) await store.logout(token);
-    reply.clearCookie(cookieName, { path: '/' }).status(204).send();
+    return reply.clearCookie(cookieName, { path: '/' }).status(204).send();
   });
   app.post('/v1/auth/password/forgot', async (request, reply) => {
     const { email } = forgotPasswordSchema.parse(request.body);
@@ -154,7 +156,7 @@ export async function buildApp(store: AppStore = createStore(), mailer: Mailer =
   app.post('/v1/auth/password/reset', async (request, reply) => {
     const input = resetPasswordSchema.parse(request.body);
     await auth.resetPassword(input.email, input.code, input.newPassword);
-    reply.status(204).send();
+    return reply.status(204).send();
   });
   app.post('/v1/auth/password/change/request', async (request, reply) => {
     const user = await requireUser(request);
@@ -250,7 +252,7 @@ export async function buildApp(store: AppStore = createStore(), mailer: Mailer =
   app.delete<{ Params: { id: string } }>('/v1/recipes/:id', async (request, reply) => {
     const user = await requireUser(request);
     await store.deleteRecipe(user.id, request.params.id);
-    reply.status(204).send();
+    return reply.status(204).send();
   });
 
   app.get('/v1/favorites', async (request) => {
@@ -261,12 +263,12 @@ export async function buildApp(store: AppStore = createStore(), mailer: Mailer =
   app.post<{ Params: { id: string } }>('/v1/favorites/:id', async (request, reply) => {
     const user = await requireUser(request);
     await store.addFavorite(user.id, request.params.id);
-    reply.status(204).send();
+    return reply.status(204).send();
   });
   app.delete<{ Params: { id: string } }>('/v1/favorites/:id', async (request, reply) => {
     const user = await requireUser(request);
     await store.removeFavorite(user.id, request.params.id);
-    reply.status(204).send();
+    return reply.status(204).send();
   });
   app.get('/v1/shopping-list', async (request) => {
     const user = await requireUser(request);
@@ -285,7 +287,7 @@ export async function buildApp(store: AppStore = createStore(), mailer: Mailer =
     async (request, reply) => {
       const user = await requireUser(request);
       await store.removeShopping(user.id, request.params.ingredientId);
-      reply.status(204).send();
+      return reply.status(204).send();
     },
   );
   app.get('/v1/achievements/unseen', async (request) => {
@@ -297,7 +299,7 @@ export async function buildApp(store: AppStore = createStore(), mailer: Mailer =
     async (request, reply) => {
       const user = await requireUser(request);
       await store.markSeen(user.id, request.params.code);
-      reply.status(204).send();
+      return reply.status(204).send();
     },
   );
   app.post('/v1/subscribe', async (request, reply) => {

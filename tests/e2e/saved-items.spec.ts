@@ -67,6 +67,48 @@ test('favorite and shopping actions persist into their list pages and can be rem
   await expect(page.getByRole('heading', { name: 'Your shopping list is empty' })).toBeVisible();
 });
 
+test('adds every remaining recipe ingredient from the heading control', async ({ page }) => {
+  const requests: Array<{ ingredientId: string; measure: string }> = [];
+  const items: Array<{
+    ingredientId: string;
+    title: string;
+    thumb: string;
+    measure: string;
+  }> = [];
+  await page.route('**/api/v1/favorites**', async (route) => {
+    if (route.request().method() === 'GET')
+      return route.fulfill({ contentType: 'application/json', body: '{"items":[]}' });
+    return route.fulfill({ status: 204 });
+  });
+  await page.route('**/api/v1/shopping-list**', async (route) => {
+    if (route.request().method() === 'GET')
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ items }),
+      });
+    const input = route.request().postDataJSON() as { ingredientId: string; measure: string };
+    requests.push(input);
+    const item = { ...input, title: 'Ingredient', thumb: '' };
+    items.push(item);
+    return route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ item }),
+    });
+  });
+  await page.goto(`/recipe/${recipeId}`);
+  const ingredientCount = await page.locator('.ingredients > li').count();
+
+  await page.getByRole('button', { name: 'Add all ingredients to shopping list' }).click();
+
+  await expect(
+    page.getByRole('button', { name: 'All ingredients are in shopping list' }),
+  ).toBeDisabled();
+  expect(requests).toHaveLength(ingredientCount);
+  expect(new Set(requests.map((item) => item.ingredientId)).size).toBe(ingredientCount);
+  expect(requests.every((item) => item.measure.length > 0)).toBe(true);
+});
+
 test('saved-item failures are announced without changing state', async ({ page }) => {
   await page.route('**/api/v1/favorites**', async (route) => {
     if (route.request().method() === 'GET')
@@ -103,10 +145,21 @@ test('fixed light and dark surfaces keep readable colors in dark mode', async ({
 
   await page.goto(`/recipe/${recipeId}`);
   await expect(page.locator('.recipeHero > div')).toHaveCSS('color', 'rgb(34, 37, 42)');
+  await expect(page.getByRole('button', { name: 'Add to favorite recipes' })).toHaveCSS(
+    'background-color',
+    'rgb(34, 37, 42)',
+  );
+  await expect(page.getByRole('button', { name: 'Add to favorite recipes' })).toHaveCSS(
+    'color',
+    'rgb(255, 255, 255)',
+  );
   await expect(page.locator('.ingredients li').first()).toHaveCSS('color', 'rgb(34, 37, 42)');
   await expect(page.locator('.ingredients li').first()).toHaveCSS(
     'background-color',
     'rgb(235, 243, 212)',
   );
   await expect(page.locator('.ingredients button').first()).toHaveCSS('color', 'rgb(34, 37, 42)');
+  await expect(
+    page.getByRole('button', { name: 'Add all ingredients to shopping list' }),
+  ).toHaveCSS('color', 'rgb(255, 255, 255)');
 });

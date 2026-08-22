@@ -135,6 +135,44 @@ describe('API', () => {
         .statusCode,
     ).toBe(200);
   });
+  it('adds and removes a favorite through the HTTP handlers', async () => {
+    const email = 'favorite-actions@example.com';
+    await app.inject({
+      method: 'POST',
+      url: '/v1/auth/register',
+      payload: { name: 'Favorite User', email, password: 'strong-password' },
+    });
+    const verification = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/register/verify',
+      payload: { email, code: mailer.code('registration') },
+    });
+    const cookie = String(verification.headers['set-cookie']).split(';')[0]!;
+    const popular = await app.inject({ method: 'GET', url: '/v1/recipes/popular' });
+    const recipeId = popular.json().items[0].id as string;
+
+    const added = await app.inject({
+      method: 'POST',
+      url: `/v1/favorites/${recipeId}`,
+      headers: { cookie },
+    });
+    expect(added.statusCode).toBe(204);
+    const favorites = await app.inject({
+      method: 'GET',
+      url: '/v1/favorites',
+      headers: { cookie },
+    });
+    expect(favorites.json().items).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: recipeId })]),
+    );
+
+    const removed = await app.inject({
+      method: 'DELETE',
+      url: `/v1/favorites/${recipeId}`,
+      headers: { cookie },
+    });
+    expect(removed.statusCode).toBe(204);
+  });
   it('returns the standard error envelope', async () => {
     const response = await app.inject({ method: 'GET', url: '/v1/users/me' });
     expect(response.statusCode).toBe(401);

@@ -1,7 +1,11 @@
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { catalog } from '@/lib/catalog';
-import { FavoriteButton, ShoppingListButton } from '@/components/saved-item-controls';
+import {
+  AddAllToShoppingListButton,
+  FavoriteButton,
+  ShoppingListButton,
+} from '@/components/saved-item-controls';
 export default async function RecipePage({ params }: { params: Promise<{ recipeId: string }> }) {
   const { recipeId } = await params;
   const { recipes } = await catalog();
@@ -23,7 +27,10 @@ export default async function RecipePage({ params }: { params: Promise<{ recipeI
       </section>
       <div className="recipeDetail">
         <section>
-          <h2>Ingredients</h2>
+          <div className="ingredientsHeading">
+            <h2>Ingredients</h2>
+            <AddAllToShoppingListButton ingredients={recipe.ingredients} />
+          </div>
           <ul className="ingredients">
             {recipe.ingredients.map((ingredient) => (
               <li key={ingredient.ingredientId}>

@@ -730,6 +730,42 @@ footer {
   grid-template-columns: 1fr 1fr;
   gap: 80px;
 }
+.ingredientsHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.ingredientsHeading h2 {
+  margin-right: auto;
+}
+.addAllControl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.ingredientsHeading .addAllControl button {
+  min-width: 76px;
+  padding: 7px 13px;
+  border: 1px solid var(--green);
+  border-radius: 18px;
+  background: var(--green);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.ingredientsHeading .addAllControl button:hover,
+.ingredientsHeading .addAllControl button:focus-visible {
+  background: var(--fixed-dark-surface);
+  border-color: var(--fixed-dark-surface);
+  color: var(--fixed-dark-text);
+}
+.addAllControl .inlineError {
+  max-width: 220px;
+  margin-top: 5px;
+  text-align: right;
+}
 .ingredients {
   list-style: none;
   padding: 0;
@@ -946,6 +982,24 @@ footer {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+.recipeHero .favoriteControl button {
+  border: 2px solid var(--fixed-dark-surface);
+  background: var(--fixed-dark-surface);
+  color: var(--fixed-dark-text);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 24%);
+}
+.recipeHero .favoriteControl button[aria-pressed='true'] {
+  border-color: var(--green);
+  background: var(--green);
+  color: white;
+}
+.recipeHero .favoriteControl button:hover,
+.recipeHero .favoriteControl button:focus-visible {
+  border-color: var(--green);
+  background: var(--green);
+  color: white;
 }
 .favoriteControl .inlineError {
   margin-top: -6px;
